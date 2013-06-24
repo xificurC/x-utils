@@ -103,3 +103,18 @@
     `(defmacro/g! ,name ,args
        `(let ,(mapcar #'list (list ,@gs) (list ,@os))
 	  ,(progn ,@body)))))
+
+;;;;;;;;;;;;;;
+;; ANAPHORA ;;
+;;;;;;;;;;;;;;
+
+(defmacro aif (test then &optional else)
+  `(let ((it ,test))
+     (if it ,then ,else)))
+
+(defmacro awhen (test &body body)
+  `(aif ,test ,@body))
+
+(defmacro alambda (params &body body)
+  `(labels ((self ,params ,@body))
+     #'self))
