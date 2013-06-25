@@ -22,10 +22,12 @@
      (,n ,@(mapcar #'cadr letargs))))
 
 (defmacro if-let ((name val) then &optional else)
+  "Binds val to name and creates an (if name then else)"
   `(let ((,name ,val))
      (if ,name ,then ,else)))
 
 (defmacro when-let ((name val) &body body)
+  "Binds val to name and creates a (when name body)"
   `(let ((,name ,val))
      (when ,name ,@body)))
 
@@ -84,27 +86,33 @@
 ;;;;;;;;;;
 
 (defun mapa-b (fn a b &optional (step 1))
+  "Map a function on numbers from a to b by step"
   (do ((i a (+ a step))
        (acc))
       ((> i b) (nreverse acc))
     (push (funcall fn i) acc)))
 
 (defun map0-n (fn n)
+  "Map a function on numbers from 0 to n"
   (mapa-b fn 0 n))
 
 (defun map1-n (fn n)
+  "Map a function on numbers from 1 to n"
   (mapa-b fn 1 n))
 
 (defun map-> (fn start test-fn succ-fn)
+  "Map a function on start and successors decided by succ-fn until test-fn is satisfied"
   (do ((i start (funcall succ-fn i))
        (acc))
       ((funcall test-fn i) (nreverse acc))
     (push (funcall fn i) acc)))
 
 (defun mappend (fn &rest lsts)
+  "Non-destructive mapcan"
   (apply #'append (apply #'mapcar fn lsts)))
 
 (defun mapcars (fn &rest lsts)
+  "Instead of (mapcar fn (list a b)) you can write (mapcars fn a b)"
   (let ((result nil))
     (dolist (lst lsts)
       (dolist (obj lst)
@@ -112,6 +120,7 @@
     (nreverse result)))
 
 (defun rmapcar (fn &rest args)
+  "Mapcar recursing in a tree"
   (if (some #'atom args)
       (apply fn args)
       (apply #'mapcar
@@ -124,11 +133,13 @@
 ;;;;;;;;;;;
 
 (defmacro while (test &body body)
+  "Loops while test is true"
   `(do ()
        ((not ,test))
      ,@body))
 
 (defmacro until (test &body body)
+  "Loops until test is true"
   `(do ()
        (,test)
      ,@body))
@@ -138,6 +149,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defmacro mac (expr)
+  "Macroexpand-1 pretty printer without the annoying quote"
   `(pprint (macroexpand-1 ',expr)))
 
 (defun g!-symbol-p (s)
@@ -177,13 +189,16 @@
 ;;;;;;;;;;;;;;
 
 (defmacro aif (test then &optional else)
+  "Anaphoric if, test stored in a symbol it"
   `(let ((it ,test))
      (if it ,then ,else)))
 
 (defmacro awhen (test &body body)
+  "Anaphoric when, test stored in a symbol it"
   `(aif ,test (progn ,@body)))
 
 (defmacro alambda (params &body body)
+  "Anaphoric lambda, can recurse through call to self"
   `(labels ((self ,params ,@body))
      #'self))
 
