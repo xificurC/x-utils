@@ -11,6 +11,23 @@
   "Interns a symbol by concatenating args"
   (values (intern (apply #'mkstr args))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; LETS, LABELS, LAMBDAS ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defmacro nlet (n letargs &rest body)
+  "Named let - for recursive solutions"
+  `(labels ((,n ,(mapcar #'car letargs)
+	      ,@body))
+     (,n ,@(mapcar #'cadr letargs))))
+
+(defmacro if-let ((name val) then &optional else)
+  `(let ((,name ,val))
+     (if ,name ,then ,else)))
+
+(defmacro when-let ((name val) &body body)
+  `(let ((,name ,val))
+     (when ,name ,@body)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;
 ;; UTILITY FUNCTIONS ;;
@@ -33,12 +50,6 @@
 		   ((atom x) (cons x acc))
 		   (t (rec (car x) (rec (cdr x) acc))))))
     (rec x nil)))
-
-(defmacro nlet (n letargs &rest body)
-  "Named let - for recursive solutions"
-  `(labels ((,n ,(mapcar #'car letargs)
-	      ,@body))
-     (,n ,@(mapcar #'cadr letargs))))
 
 (defun fact (x)
   "Factorial of x"
@@ -68,6 +79,10 @@
 		  (lambda (x) (declare (ignorable x)) ,test)
 		  (lambda (x) (declare (ignorable x)) ,result)))
 
+;;;;;;;;;;
+;; MAPS ;;
+;;;;;;;;;;
+
 (defun mapa-b (fn a b &optional (step 1))
   (do ((i a (+ a step))
        (acc))
@@ -84,7 +99,7 @@
   (do ((i start (funcall succ-fn i))
        (acc))
       ((funcall test-fn i) (nreverse acc))
-    (push (funcall fn i) result)))
+    (push (funcall fn i) acc)))
 
 (defun mappend (fn &rest lsts)
   (apply #'append (apply #'mapcar fn lsts)))
@@ -93,7 +108,7 @@
   (let ((result nil))
     (dolist (lst lsts)
       (dolist (obj lst)
-	(push (funcall fn obj) results)))
+	(push (funcall fn obj) result)))
     (nreverse result)))
 
 (defun rmapcar (fn &rest args)
@@ -103,6 +118,10 @@
 	     (lambda (&rest args)
 	       (apply #'rmapcar fn args))
 	     args)))
+
+;;;;;;;;;;;
+;; LOOPS ;;
+;;;;;;;;;;;
 
 (defmacro while (test &body body)
   `(do ()
@@ -114,12 +133,12 @@
        (,test)
      ,@body))
 
-(defmacro mac (expr)
-  `(pprint (macroexpand-1 ',expr)))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; MACRO WRITING UTILITY - DEFMACRO! ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defmacro mac (expr)
+  `(pprint (macroexpand-1 ',expr)))
 
 (defun g!-symbol-p (s)
   "Returns true if s is a g! symbol"
@@ -167,3 +186,4 @@
 (defmacro alambda (params &body body)
   `(labels ((self ,params ,@body))
      #'self))
+
