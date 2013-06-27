@@ -152,6 +152,11 @@
   "Macroexpand-1 pretty printer without the annoying quote"
   `(pprint (macroexpand-1 ',expr)))
 
+(defmacro with-gensyms (syms &body body)
+    `(let ,(mapcar (lambda (s) `(,s (gensym)))
+		   syms)
+       ,@body))
+
 (defun g!-symbol-p (s)
   "Returns true if s is a g! symbol"
   (and (symbolp s)
@@ -221,7 +226,9 @@
 	    (sym (gensym)))
 	`(let ((,sym ,(car cl1)))
 	   (if ,sym
-	       (let ((it ,sym)) ,@(cdr cl1))
+	       (let ((it ,sym))
+		 (declare (ignorable it))
+		 ,@(cdr cl1))
 	       (acond ,@(cdr clauses)))))))
 
 (defmacro aif2 (test &optional then else)
@@ -243,5 +250,7 @@
 	    (win (gensym)))
 	`(multiple-value-bind (,val ,win) ,(car cl1)
 	   (if (or ,val ,win)
-	       (let ((it ,val)) ,@(cdr cl1))
+	       (let ((it ,val))
+		 (declare (ignorable it))
+		 ,@(cdr cl1))
 	       (acond2 ,@(cdr clauses)))))))
