@@ -15,6 +15,7 @@
 ;;;;;;;;;;;
 
 (defun destruc (pat seq &optional (atom? #'atom) (n 0))
+  "Creates a list of lists holding the vars of pat and their spots in seq"
   (if (null pat)
       nil
       (let ((rest (cond ((funcall atom? pat) pat)
@@ -33,6 +34,7 @@
 			  rec))))))))
 
 (defun dbind-ex (binds body)
+  "Bind binds with lets recursively in the binding tree"
   (if (null binds)
       `(progn ,@body)
       `(let ,(mapcar (lambda (b)
@@ -46,10 +48,9 @@
 			    binds)
 		    body))))
 
-(defmacro dbind (pat seq &body body)
-  (let ((gseq (gensym)))
-    `(let ((,gseq ,seq))
-       ,(dbind-ex (destruc pat gseq #'atom) body))))
+(defmacro! dbind (pat o!seq &body body)
+  "Binds seq based on pat"
+  (dbind-ex (destruc pat g!seq #'atom) body))
 
 ;;;;;;;;;;;;;;
 ;; MATCHING ;;
