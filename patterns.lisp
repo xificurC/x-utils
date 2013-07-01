@@ -1,14 +1,7 @@
 ;;;;;;;;;;;;;
 ;; PACKAGE ;;
 ;;;;;;;;;;;;;
-;(in-package :cl-user)
-;(load "utilities.lisp")
-
-
-;(defpackage :patterns
-;  (:use :common-lisp))
-
-;(in-package :patterns)
+(in-package :x-utils)
 
 ;;;;;;;;;;;
 ;; DBIND ;;
