@@ -7,7 +7,8 @@
 ;; DBIND ;;
 ;;;;;;;;;;;
 
-(defun destruc (pat seq &optional (atom? #'atom) (n 0))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+ (defun destruc (pat seq &optional (atom? #'atom) (n 0))
   "Creates a list of lists holding the vars of pat and their spots in seq"
   (if (null pat)
       nil
@@ -25,8 +26,7 @@
 		    (cons (cons `(,var (elt ,seq ,n))
 				(destruc p var atom?))
 			  rec))))))))
-
-(defun dbind-ex (binds body)
+ (defun dbind-ex (binds body)
   "Bind binds with lets recursively in the binding tree"
   (if (null binds)
       `(progn ,@body)
@@ -39,11 +39,12 @@
 			      (if (consp (car b))
 				  (cdr b)))
 			    binds)
-		    body))))
+		    body)))))
 
-(defmacro! dbind (pat o!seq &body body)
-  "Binds seq based on pat"
-  (dbind-ex (destruc pat g!seq #'atom) body))
+(defmacro dbind (pat seq &body body)
+  (let ((gseq (gensym)))
+    `(let ((,gseq ,seq))
+       ,(dbind-ex (destruc pat gseq #'atom) body))))
 
 ;;;;;;;;;;;;;;
 ;; MATCHING ;;
@@ -82,14 +83,45 @@
 ;	   ,then)
 ;	 ,else))
 
-(defun vars-in (expr &optional (atom? #'atom))
-  (if (funcall atom? expr)
-      (if (var? expr) (list expr))
-      (union (vars-in (car expr) atom?)
-	     (vars-in (cdr expr) atom?))))
-
-(defun var? (x)
-  (and (symbolp x) (eq (char (symbol-name x) 0) #\?)))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun vars-in (expr &optional (atom? #'atom))
+    (if (funcall atom? expr)
+	(if (var? expr) (list expr))
+	(union (vars-in (car expr) atom?)
+	       (vars-in (cdr expr) atom?))))
+  (defun var? (x)
+    (and (symbolp x) (eq (char (symbol-name x) 0) #\?)))
+  (defun simple? (x) (or (atom x) (eq (car x) 'quote)))
+  (defun gen-match (refs then else)
+    (if (null refs)
+	then
+	(let ((then (gen-match (cdr refs) then else)))
+	  (if (simple? (caar refs))
+	      (match1 refs then else)
+	      (gen-match (car refs) then else)))))
+  (defun gensym? (s)
+    (and (symbolp s) (not (symbol-package s))))
+  (defun length-test (pat rest)
+    (let ((fin (caadar (last rest))))
+      (if (or (consp fin) (eq fin 'elt))
+	  `(= (length ,pat) ,(length rest))
+	  `(> (length ,pat) ,(- (length rest) 2)))))
+  (defun match1 (refs then else)
+    (dbind ((pat expr) . rest) refs
+	   (cond ((gensym? pat)
+		  `(let ((,pat ,expr))
+		     (if (and (typep ,pat 'sequence)
+			      ,(length-test pat rest))
+			 ,then
+			 ,else)))
+		 ((eq pat '_) then)
+		 ((var? pat)
+		  (let ((ge (gensym)))
+		    `(let ((,ge ,expr))
+		       (if (or (gensym? ,pat) (equal ,pat ,ge))
+			   (let ((,pat ,ge)) ,then)
+			   ,else))))
+		 (t `(if (equal ,pat ,expr) ,then ,else))))))
 
 (defmacro if-match (pat seq then &optional else)
   `(let ,(mapcar (lambda (v) `(,v ',(gensym)))
@@ -105,39 +137,3 @@
 			     (destruc pat gseq #'simple?))
 		       then
 		       `(,gelse))))))
-
-(defun simple? (x) (or (atom x) (eq (car x) 'quote)))
-
-(defun gen-match (refs then else)
-  (if (null refs)
-      then
-      (let ((then (gen-match (cdr refs) then else)))
-	(if (simple? (caar refs))
-	    (match1 refs then else)
-	    (gen-match (car refs) then else)))))
-
-(defun match1 (refs then else)
-  (dbind ((pat expr) . rest) refs
-	 (cond ((gensym? pat)
-		`(let ((,pat ,expr))
-		   (if (and (typep ,pat 'sequence)
-			    ,(length-test pat rest))
-		       ,then
-		       ,else)))
-	       ((eq pat '_) then)
-	       ((var? pat)
-		(let ((ge (gensym)))
-		  `(let ((,ge ,expr))
-		     (if (or (gensym? ,pat) (equal ,pat ,ge))
-			 (let ((,pat ,ge)) ,then)
-			 ,else))))
-	       (t `(if (equal ,pat ,expr) ,then ,else)))))
-
-(defun gensym? (s)
-  (and (symbolp s) (not (symbol-package s))))
-
-(defun length-test (pat rest)
-  (let ((fin (caadar (last rest))))
-    (if (or (consp fin) (eq fin 'elt))
-	`(= (length ,pat) ,(length rest))
-	`(> (length ,pat) ,(- (length rest) 2)))))
