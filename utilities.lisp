@@ -72,14 +72,15 @@
      (fact (- n r))
      (fact r)))
 
-(defun tree-leaves%% (tree test result)
-  (if tree
-      (if (listp tree)
-	  (cons (tree-leaves%% (car tree) test result)
-		(tree-leaves%% (cdr tree) test result))
-	  (if (funcall test tree)
-	      (funcall result tree)
-	      tree))))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+ (defun tree-leaves%% (tree test result)
+   (if tree
+       (if (listp tree)
+	   (cons (tree-leaves%% (car tree) test result)
+		 (tree-leaves%% (cdr tree) test result))
+	   (if (funcall test tree)
+	       (funcall result tree)
+	       tree)))))
 
 (defmacro tree-leaves (tree test result)
   "Walk a tree and change leaves that satisfy test to result"
