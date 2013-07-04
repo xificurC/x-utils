@@ -14,6 +14,7 @@
    :fact
    :choose
    :tree-leaves
+   :dbg
    :mapa-b
    :map0-n
    :map1-n

@@ -88,6 +88,38 @@
 		  (lambda (x) (declare (ignorable x)) ,test)
 		  (lambda (x) (declare (ignorable x)) ,result)))
 
+(defmacro dbg (sexp)
+  "Debugging command that prints the result of the sexp and returns its value"
+  (let ((g (gensym)))
+    `(let ((,g ,sexp))
+       (format t "~&~a returned ~a" ',sexp ,g)
+       ,g)))
+
+(defun find-lists (lst)
+  (loop for x in lst
+     for counter = 0 then (1+ counter) when (listp x) collect counter))
+
+(defun debug-on-funs (funs body)
+  (if body
+      (let ((head (car body))
+	    (tail (cdr body)))
+	(if (listp head)
+	    (cons (debug-on-funs funs head)
+		  (debug-on-funs funs tail))
+	    (let ((pos (position-if #'listp body)))
+	      (if (and tail (member head funs))
+		  (if pos
+		      `(dbg ,(append (subseq body 0 pos)
+				     (debug-on-funs funs (subseq body pos))))
+		      `(dbg ,body))
+		  (if pos
+		      (append (subseq body 0 pos) (debug-on-funs funs (subseq body pos)))
+		      body)))))))
+
+(defmacro with-debug-funs (funs &body body)
+  "Prints debugging on provided funs"
+  )
+
 ;;;;;;;;;;
 ;; MAPS ;;
 ;;;;;;;;;;
@@ -160,6 +192,7 @@
   `(pprint (macroexpand-1 ',expr)))
 
 (defmacro with-gensyms (syms &body body)
+  "Generates gensyms for syms"
     `(let ,(mapcar (lambda (s) `(,s (gensym)))
 		   syms)
        ,@body))
