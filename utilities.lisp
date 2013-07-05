@@ -1,41 +1,4 @@
-;;;;;;;;;;;;;
-;; PACKAGE ;;
-;;;;;;;;;;;;;
-
 (in-package :x-utils)
-
-;;;;;;;;;;;;;;;;;;;;;
-;; SYMBOL CREATION ;;
-;;;;;;;;;;;;;;;;;;;;;
-
-(defun mkstr (&rest args)
-  "Concatenates strings"
-  (with-output-to-string (s)
-    (dolist (a args) (princ a s))))
-
-(defun symb (&rest args)
-  "Interns a symbol by concatenating args"
-  (values (intern (apply #'mkstr args))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; LETS, LABELS, LAMBDAS ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defmacro nlet (n letargs &rest body)
-  "Named let - for recursive solutions"
-  `(labels ((,n ,(mapcar #'car letargs)
-	      ,@body))
-     (,n ,@(mapcar #'cadr letargs))))
-
-(defmacro if-let ((name val) then &optional else)
-  "Binds val to name and creates an (if name then else)"
-  `(let ((,name ,val))
-     (if ,name ,then ,else)))
-
-(defmacro when-let ((name val) &body body)
-  "Binds val to name and creates a (when name body)"
-  `(let ((,name ,val))
-     (when ,name ,@body)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;
 ;; UTILITY FUNCTIONS ;;
@@ -88,37 +51,15 @@
 		  (lambda (x) (declare (ignorable x)) ,test)
 		  (lambda (x) (declare (ignorable x)) ,result)))
 
-(defmacro dbg (sexp)
+;;;;;;;;;;;;;;;
+;; DEBUGGING ;;
+;;;;;;;;;;;;;;;
+
+(defmacro! dbg (o!sexp)
   "Debugging command that prints the result of the sexp and returns its value"
-  (let ((g (gensym)))
-    `(let ((,g ,sexp))
-       (format t "~&~a returned ~a" ',sexp ,g)
-       ,g)))
-
-(defun find-lists (lst)
-  (loop for x in lst
-     for counter = 0 then (1+ counter) when (listp x) collect counter))
-
-(defun debug-on-funs (funs body)
-  (if body
-      (let ((head (car body))
-	    (tail (cdr body)))
-	(if (listp head)
-	    (cons (debug-on-funs funs head)
-		  (debug-on-funs funs tail))
-	    (let ((pos (position-if #'listp body)))
-	      (if (and tail (member head funs))
-		  (if pos
-		      `(dbg ,(append (subseq body 0 pos)
-				     (debug-on-funs funs (subseq body pos))))
-		      `(dbg ,body))
-		  (if pos
-		      (append (subseq body 0 pos) (debug-on-funs funs (subseq body pos)))
-		      body)))))))
-
-(defmacro with-debug-funs (funs &body body)
-  "Prints debugging on provided funs"
-  )
+  `(progn
+     (format t "~&~a returned ~a" ',o!sexp ,g!sexp)
+     ,g!sexp))
 
 ;;;;;;;;;;
 ;; MAPS ;;
@@ -183,9 +124,9 @@
        (,test)
      ,@body))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; MACRO WRITING UTILITY - DEFMACRO! ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;
+;; MACRO UTILITIES ;;
+;;;;;;;;;;;;;;;;;;;;;
 
 (defmacro mac (expr)
   "Macroexpand-1 pretty printer without the annoying quote"
@@ -196,101 +137,3 @@
     `(let ,(mapcar (lambda (s) `(,s (gensym)))
 		   syms)
        ,@body))
-
-(defun g!-symbol-p (s)
-  "Returns true if s is a g! symbol"
-  (and (symbolp s)
-       (> (length (symbol-name s)) 2)
-       (string= (symbol-name s) "G!" :start1 0 :end1 2)))
-
-(defmacro defmacro/g! (name args &rest body)
-  "Defmacro with auto-gensym for g! symbols"
-  (let ((syms (remove-duplicates (remove-if-not #'g!-symbol-p (flatten body)))))
-    `(defmacro ,name ,args
-       (let ,(mapcar (lambda (s) `(,s (gensym ,(subseq (symbol-name s) 2))))
-		     syms)
-	 ,@body))))
-
-(defun o!-symbol-p (s)
-  "Returns true if s is a o! symbol"
-  (and (symbolp s)
-       (> (length (symbol-name s)) 2)
-       (string= (symbol-name s) "O!" :start1 0 :end1 2)))
-
-(defun o!-symbol-to-g!-symbol (s)
-  "Interns a g! symbol for an o! symbol"
-  (symb "G!" (subseq (symbol-name s) 2)))
-
-(defmacro defmacro! (name args &rest body)
-  "Defmacro with auto-gensym and auto once only"
-  (let* ((os (remove-if-not #'o!-symbol-p args))
-	 (gs (mapcar #'o!-symbol-to-g!-symbol os)))
-    `(defmacro/g! ,name ,args
-       `(let ,(mapcar #'list (list ,@gs) (list ,@os))
-	  ,(progn ,@body)))))
-
-;;;;;;;;;;;;;;
-;; ANAPHORA ;;
-;;;;;;;;;;;;;;
-
-(defmacro aif (test then &optional else)
-  "Anaphoric if, test stored in a symbol it"
-  `(let ((it ,test))
-     (if it ,then ,else)))
-
-(defmacro awhen (test &body body)
-  "Anaphoric when, test stored in a symbol it"
-  `(aif ,test (progn ,@body)))
-
-(defmacro awhile (expr &body body)
-  "Anaphoric while"
-  `(do ((it ,expr ,expr))
-       ((not it))
-     ,@body))
-
-(defmacro auntil (expr &body body)
-  "Anaphoric until"
-  `(do ((it ,expr ,expr))
-       (it)
-     ,@body))
-
-(defmacro alambda (params &body body)
-  "Anaphoric lambda, can recurse through call to self"
-  `(labels ((self ,params ,@body))
-     #'self))
-
-(defmacro acond (&rest clauses)
-  "Anaphoric cond"
-  (if (null clauses)
-      (let ((cl1 (car clauses))
-	    (sym (gensym)))
-	`(let ((,sym ,(car cl1)))
-	   (if ,sym
-	       (let ((it ,sym))
-		 (declare (ignorable it))
-		 ,@(cdr cl1))
-	       (acond ,@(cdr clauses)))))))
-
-(defmacro aif2 (test &optional then else)
-  "Anaphoric if for lookup tests"
-  (let ((win (gensym)))
-    `(multiple-value-bind (it ,win) ,test
-       (if (or it ,win) ,then ,else))))
-
-(defmacro awhen2 (test &body body)
-  "Anaphoric when for lookup tests"
-  `(aif2 ,test (progn ,@body)))
-
-(defmacro acond2 (&rest clauses)
-  "Anaphoric cond for lookup tests"
-  (if (null clauses)
-      nil
-      (let ((cl1 (car clauses))
-	    (val (gensym))
-	    (win (gensym)))
-	`(multiple-value-bind (,val ,win) ,(car cl1)
-	   (if (or ,val ,win)
-	       (let ((it ,val))
-		 (declare (ignorable it))
-		 ,@(cdr cl1))
-	       (acond2 ,@(cdr clauses)))))))
