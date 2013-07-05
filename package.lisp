@@ -1,6 +1,7 @@
 (defpackage :x-utils
   (:use :cl)
   (:export
+   :with-debug-funs
    :destruc
    :dbind-ex
    :dbind
