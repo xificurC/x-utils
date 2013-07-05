@@ -53,26 +53,27 @@
      (format t "~&~a returned ~a" ',o!sexp ,g!sexp)
      ,g!sexp))
 
-(defun debug-funs (funs body)
-  "Surrounds funs in body with dbg"
-  (destructuring-bind (head . tail) body
-    (if-let (next-list (position-if #'listp tail))
-	    (if (listp head)
-		(append (cons (debug-funs funs head)
-			      (subseq tail 0 next-list))
-			(debug-funs funs (subseq tail next-list)))
-		(if (member head funs)
-		    `(dbg (,head
-			   ,@(subseq tail 0 next-list)
-			   ,@(debug-funs funs (subseq tail next-list))))
-		    (append (cons head
-				  (subseq tail 0 next-list))
-			    (debug-funs funs (subseq tail next-list)))))
-	    (if (listp head)
-		(cons (debug-funs funs head) tail)
-		(if (member head funs)
-		    `(dbg ,body)
-		    body)))))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun debug-funs (funs body)
+    "Surrounds funs in body with dbg"
+    (destructuring-bind (head . tail) body
+      (if-let (next-list (position-if #'listp tail))
+	      (if (listp head)
+		  (append (cons (debug-funs funs head)
+				(subseq tail 0 next-list))
+			  (debug-funs funs (subseq tail next-list)))
+		  (if (member head funs)
+		      `(dbg (,head
+			     ,@(subseq tail 0 next-list)
+			     ,@(debug-funs funs (subseq tail next-list))))
+		      (append (cons head
+				    (subseq tail 0 next-list))
+			      (debug-funs funs (subseq tail next-list)))))
+	      (if (listp head)
+		  (cons (debug-funs funs head) tail)
+		  (if (member head funs)
+		      `(dbg ,body)
+		      body))))))
 
 (defmacro! with-debug-funs (funs &body body)
   `(progn ,@(mapcar (lambda (g!x) (debug-funs funs g!x)) body)))

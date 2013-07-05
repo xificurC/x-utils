@@ -1,7 +1,7 @@
 (defpackage :x-utils
   (:use :cl)
   (:export
-   :with-debug-funs
+   :bind
    :destruc
    :dbind-ex
    :dbind
@@ -16,6 +16,7 @@
    :choose
    :tree-leaves
    :dbg
+   :with-debug-funs
    :mapa-b
    :map0-n
    :map1-n
@@ -26,7 +27,6 @@
    :while
    :until
    :mac
-   :g!-symbol-p
    :defmacro!
    :aif
    :awhen
