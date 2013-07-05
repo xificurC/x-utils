@@ -68,6 +68,55 @@
 		  (lambda (x) (declare (ignorable x)) ,test)
 		  (lambda (x) (declare (ignorable x)) ,result)))
 
+(defun mapa-b (fn a b &optional (step 1))
+  (do ((i a (+ a step))
+       (acc))
+      ((> i b) (nreverse acc))
+    (push (funcall fn i) acc)))
+
+(defun map0-n (fn n)
+  (mapa-b fn 0 n))
+
+(defun map1-n (fn n)
+  (mapa-b fn 1 n))
+
+(defun map-> (fn start test-fn succ-fn)
+  (do ((i start (funcall succ-fn i))
+       (acc))
+      ((funcall test-fn i) (nreverse acc))
+    (push (funcall fn i) result)))
+
+(defun mappend (fn &rest lsts)
+  (apply #'append (apply #'mapcar fn lsts)))
+
+(defun mapcars (fn &rest lsts)
+  (let ((result nil))
+    (dolist (lst lsts)
+      (dolist (obj lst)
+	(push (funcall fn obj) results)))
+    (nreverse result)))
+
+(defun rmapcar (fn &rest args)
+  (if (some #'atom args)
+      (apply fn args)
+      (apply #'mapcar
+	     (lambda (&rest args)
+	       (apply #'rmapcar fn args))
+	     args)))
+
+(defmacro while (test &body body)
+  `(do ()
+       ((not ,test))
+     ,@body))
+
+(defmacro until (test &body body)
+  `(do ()
+       (,test)
+     ,@body))
+
+(defmacro mac (expr)
+  `(pprint (macroexpand-1 ',expr)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; MACRO WRITING UTILITY - DEFMACRO! ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -113,7 +162,7 @@
      (if it ,then ,else)))
 
 (defmacro awhen (test &body body)
-  `(aif ,test ,@body))
+  `(aif ,test (progn ,@body)))
 
 (defmacro alambda (params &body body)
   `(labels ((self ,params ,@body))
