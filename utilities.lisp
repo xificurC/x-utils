@@ -14,14 +14,6 @@
 		   (nreverse (cons source acc))))))
     (if source (rec source nil) nil)))
 
-(defun flatten (x)
-  "Flattens a list, e.g. '((1 2) ((3 4) (5 6))) -> '(1 2 3 4 5 6)"
-  (labels ((rec (x acc)
-	     (cond ((null x) acc)
-		   ((atom x) (cons x acc))
-		   (t (rec (car x) (rec (cdr x) acc))))))
-    (rec x nil)))
-
 (defun fact (x)
   "Factorial of x"
   (nlet rec ((x x) (acc 1))

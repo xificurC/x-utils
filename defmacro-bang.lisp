@@ -1,6 +1,14 @@
 (in-package :x-utils)
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun flatten (x)
+  "Flattens a list, e.g. '((1 2) ((3 4) (5 6))) -> '(1 2 3 4 5 6)"
+  (labels ((rec (x acc)
+	     (cond ((null x) acc)
+		   ((atom x) (cons x acc))
+		   (t (rec (car x) (rec (cdr x) acc))))))
+    (rec x nil)))
+  
   (defun mkstr (&rest args)
     "Concatenates strings"
     (with-output-to-string (s)
