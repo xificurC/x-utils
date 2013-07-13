@@ -17,23 +17,27 @@
      (when ,name ,@body)))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
- (defun l-d-m (bindings body)
-   "Expands binding calls to lets, destructuring and multiple values"
+ (defun l-l-d-m (bindings body)
+   "Expands binding calls to lets, labels, destructuring and multiple values"
    (if bindings
        (destructuring-bind (head . tail) bindings
 	 (let ((hd (car head))
 	       (tl (cadr head)))
-	   (cond ((atom hd)
+	   (cond ((and (atom hd) (caddr head))
+		  (destructuring-bind (hd sd . tl) head
+		    `(labels ((,hd ,sd ,@tl))
+		       ,(l-l-d-m tail body))))
+		 ((atom hd)
 		  `(let ((,hd ,tl))
-		     ,(l-d-m tail body)))
+		     ,(l-l-d-m tail body)))
 		 ((and (listp (cdr hd)) (not (cddr hd)))
 		  `(multiple-value-bind ,hd ,tl
-		     ,(l-d-m tail body)))
+		     ,(l-l-d-m tail body)))
 		 (t
 		  `(destructuring-bind ,hd ,tl
-		     ,(l-d-m tail body))))))
+		     ,(l-l-d-m tail body))))))
        body)))
 
 (defmacro bind (bindings &body body)
   "Use let, destructuring and multiple value binding in one macro"
-  (l-d-m bindings `(progn ,@body)))
+  (l-l-d-m bindings `(progn ,@body)))
